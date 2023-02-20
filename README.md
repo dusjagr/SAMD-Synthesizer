@@ -22,8 +22,16 @@ It's mapped like this:
 
     //QT1           QT8
     //   A5  A2  A9
-    //    A5   A3
+    //    A4   A3
     // QT6      QT7
+
+A0 is the 10bit DAC sound output.
+
+D/A10 is still available. The extra plug could also be used to wire CV inputs, or add some blinking RGB ligths.
+
+![](https://github.com/dusjagr/SAMD-Synthesizer/raw/main/hardware/Lakhosky_Synth/Board_screenshot.jpg)
+
+A mask a DIY etchable double sided PCB is available. Some improvements still on the way...
 
 ## More about q-touch
 

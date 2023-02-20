@@ -167,7 +167,7 @@ void loop() {
 
     //QT1           QT8
     //   A5  A2  A9
-    //    A5   A3
+    //    A4   A3
     // QT6      QT7
     osc1.inc = ((((analogRead(A5) << 13) >> 1) + 0) / SAMPLE_RATE) << 10;
 
