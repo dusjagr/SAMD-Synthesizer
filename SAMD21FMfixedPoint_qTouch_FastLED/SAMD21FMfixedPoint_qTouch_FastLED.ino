@@ -1,20 +1,20 @@
 #include <Arduino.h>
 #include "wavetablesFixedPoint.h"
 #include "Adafruit_FreeTouch.h"
-#include <Adafruit_NeoPixel.h>
+#include <FastLED.h>
 
 Adafruit_FreeTouch qt_1 = Adafruit_FreeTouch(A1, OVERSAMPLE_16, RESISTOR_50K, FREQ_MODE_NONE);
 Adafruit_FreeTouch qt_6 = Adafruit_FreeTouch( A6, OVERSAMPLE_16, RESISTOR_50K, FREQ_MODE_NONE);
 Adafruit_FreeTouch qt_7 = Adafruit_FreeTouch(A7, OVERSAMPLE_16, RESISTOR_50K, FREQ_MODE_NONE);
 Adafruit_FreeTouch qt_8 = Adafruit_FreeTouch( A8, OVERSAMPLE_16, RESISTOR_50K, FREQ_MODE_NONE);
 
-#define SAMPLE_RATE 48000
+#define SAMPLE_RATE 22000
 #define WAVE_TABLE_SIZE 8192
 
-#define LED_PIN 10
-#define LED_COUNT 24
+#define DATA_PIN 10
+#define NUM_LEDS 8
 
-Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
+CRGB leds[NUM_LEDS];
 
 const uint32_t maxAnalogIn = 4095;
 const uint32_t shiftfactor = 1024;
@@ -51,22 +51,19 @@ void setup() {
   analogReadResolution(12);
 
   Serial.begin(115200);
+  delay(500);
 
-  strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
-  strip.show();            // Turn OFF all pixels ASAP
-  strip.setBrightness(255); // Set BRIGHTNESS to about 1/5 (max = 255)
-
+  FastLED.addLeds<WS2812, DATA_PIN, RGB>(leds, NUM_LEDS);
+  FastLED.setBrightness(255);
   //rainbow(2); 
   
-  colorWipeL(strip.Color(5, 10, 0), 0);
-  colorWipeR(strip.Color(15, 5, 0), 0);
-
   tcConfigure(SAMPLE_RATE);
   
   qt_1.begin();
   qt_6.begin();
   qt_7.begin();
   qt_8.begin();
+
 }
 
 void tcConfigure(int sampleRate) {
@@ -158,7 +155,7 @@ uint16_t counter = 0;
 
 void loop() {
   counter++;
-
+  
   if (counter > 1000) { // we not so often sample the inputs but I don't want to use delay() which might interact with the interrupt
     // ===================================================
     // reading the inputs
@@ -167,36 +164,33 @@ void loop() {
     else LEDcounter++;
 
     int qt1 = qt_1.measure(); //A1
-    int QT1 = map(qt1,600,980,0,4095);
+    int QT1 = map(qt1,650,1000,0,4095);
     if (QT1 <=0) QT1 =0;
     if (QT1 >=4095) QT1=4095;
 
     int qT6 = qt_6.measure(); //A6
-    int QT6 = map(qT6,380,680,0,4095);
+    int QT6 = map(qT6,380,800,0,4095);
     if (QT6 <=0) QT6 =0;
     if (QT6 >=4095) QT6 =4095;
 
     int qT7 = qt_7.measure(); //A7
-    int QT7 = map(qT7,355,700,0,4095);
+    int QT7 = map(qT7,350,730,0,4095);
     if (QT7 <=0) QT7 =0;
     if (QT7 >=4095) QT7 =4095;
 
     int qT8 = qt_8.measure(); //A8
-    int QT8 = map(qT8,450,920,0,4095);
+    int QT8 = map(qT8,460,960,0,4095);
     if (QT8 <=0) QT8 =0;
     if (QT8 >=4095) QT8 =4095;
+    
+    if (QT6 >=200) colorWipeL(QT6>>4,QT1>>5,0, 0);
+    else colorWipeL(LEDcounter>>1,LEDcounter>>2,0, 0);
 
-    if (QT6 >=200) colorWipeR(strip.Color(  QT6>>4,   QT1>>5, 0), 0); // Blue
-    else colorWipeR(strip.Color(  LEDcounter>>1, LEDcounter>>2, 0), 0); 
-
-    if (QT7 >=200) colorWipeL(strip.Color(  QT8>>5, QT7>>4,0), 0); // Blue
-    else colorWipeL(strip.Color(  LEDcounter>>2, LEDcounter>>1, 0), 0);
+    if (QT7 >=200) colorWipeR(QT8>>5,QT7>>4,0, 0);
+    else colorWipeR(LEDcounter>>2,LEDcounter>>1,0, 0);
 
     if (LEDcounter >= 40) {
       LEDdirection = 1;
-/*      
-
-*/
     }
 
     if (LEDcounter <= 15) {
@@ -217,14 +211,22 @@ void loop() {
     osc1.volume = QT6;
 
     //osc2.inc = ((frequency * WAVE_TABLE_SIZE) / SAMPLE_RATE) * shiftfactor;
-    osc2.inc = ((((QT8 << 13) >> 1) + 0) / SAMPLE_RATE) << 8; // <<13 is the same as * WAVE_TABLE_SIZE
+    osc2.inc = ((((analogRead(A9) << 13) >> 1) + 0) / SAMPLE_RATE) << 8; // <<13 is the same as * WAVE_TABLE_SIZE
     
-    waveform = analogRead(A9);
+    waveform = QT8;
     osc2.waveform2 = waveform;
     osc2.waveform1 = maxAnalogIn - waveform;
     osc2.crossFM = analogRead(A3);    
     osc2.volume= QT7;
     
+    Serial.print(QT1);
+    Serial.print("\t");
+    Serial.print(QT6);
+    Serial.print("\t");
+    Serial.print(QT7);
+    Serial.print("\t");
+    Serial.print(QT8);
+    Serial.print("\t");
     Serial.print(qt1);
     Serial.print("\t");
     Serial.print(qT6);
@@ -237,46 +239,24 @@ void loop() {
   }
 }
 
-void colorWipe(uint32_t color, int wait) {
-  for(int i=0; i<(strip.numPixels()); i++) { // For each pixel in strip...
-    strip.setPixelColor(i, color);         //  Set pixel's color (in RAM)
-    strip.show();                          //  Update strip to match
+void colorWipeR(uint8_t red,uint8_t green,uint8_t blue, int wait) {
+  for(int i=0; i<NUM_LEDS/2; i++) { // For each pixel in strip...
+    leds[i] = CRGB(red, green, blue);
+    FastLED.show();                         //  Update strip to match
+    //delay(wait);                           //  Pause for a moment
+  }
+}
+void colorWipeL(uint8_t red,uint8_t green,uint8_t blue, int wait) {
+  for(int i=NUM_LEDS/2; i<NUM_LEDS; i++) { // For each pixel in strip...
+    leds[i] = CRGB(red, green, blue);
+    FastLED.show();                         //  Update strip to match
     //delay(wait);                           //  Pause for a moment
   }
 }
 
-void colorWipeL(uint32_t color, int wait) {
-  for(int i=0; i<(strip.numPixels()/2); i++) { // For each pixel in strip...
-    strip.setPixelColor(i, color);         //  Set pixel's color (in RAM)
-    strip.show();                          //  Update strip to match
-    //delay(wait);                           //  Pause for a moment
-  }
-}
-
-void colorWipeR(uint32_t color, int wait) {
-  for(int i=(strip.numPixels()/2); i<(strip.numPixels()); i++) { // For each pixel in strip...
-    strip.setPixelColor(i, color);         //  Set pixel's color (in RAM)
-    strip.show();                          //  Update strip to match
-    //delay(wait);                           //  Pause for a moment
-  }
-}
-
-// Rainbow cycle along whole strip. Pass delay time (in ms) between frames.
-void rainbow(int wait) {
-  // Hue of first pixel runs 5 complete loops through the color wheel.
-  // Color wheel has a range of 65536 but it's OK if we roll over, so
-  // just count from 0 to 5*65536. Adding 256 to firstPixelHue each time
-  // means we'll make 5*65536/256 = 1280 passes through this loop:
-  for(long firstPixelHue = 0; firstPixelHue < 5*65536; firstPixelHue += 256) {
-    // strip.rainbow() can take a single argument (first pixel hue) or
-    // optionally a few extras: number of rainbow repetitions (default 1),
-    // saturation and value (brightness) (both 0-255, similar to the
-    // ColorHSV() function, default 255), and a true/false flag for whether
-    // to apply gamma correction to provide 'truer' colors (default true).
-    strip.rainbow(firstPixelHue);
-    // Above line is equivalent to:
-    // strip.rainbow(firstPixelHue, 1, 255, 255, true);
-    strip.show(); // Update strip with new contents
-    delay(wait);  // Pause for a moment
-  }
+void colorClear() {
+  for(int i=0; i<NUM_LEDS; i++) { // For each pixel in strip...
+    leds[i] = CRGB::Black;
+    FastLED.show();                         //  Update strip to match
+    }
 }
