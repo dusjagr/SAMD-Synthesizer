@@ -2,6 +2,7 @@
 #include "wavetablesFixedPoint.h"
 #include "Adafruit_FreeTouch.h"
 #include <Adafruit_NeoPixel.h>
+#include "Adafruit_NeoPixel_ZeroDMA.h"
 
 Adafruit_FreeTouch qt_1 = Adafruit_FreeTouch(A1, OVERSAMPLE_16, RESISTOR_50K, FREQ_MODE_NONE);
 Adafruit_FreeTouch qt_6 = Adafruit_FreeTouch( A6, OVERSAMPLE_16, RESISTOR_50K, FREQ_MODE_NONE);
@@ -11,10 +12,12 @@ Adafruit_FreeTouch qt_8 = Adafruit_FreeTouch( A8, OVERSAMPLE_16, RESISTOR_50K, F
 #define SAMPLE_RATE 48000
 #define WAVE_TABLE_SIZE 8192
 
-#define LED_PIN 10
+#define LED_PIN A2
 #define LED_COUNT 24
 
-Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel_ZeroDMA strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
+
+//Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB);
 
 const uint32_t maxAnalogIn = 4095;
 const uint32_t shiftfactor = 1024;
@@ -50,7 +53,7 @@ void setup() {
   analogWrite(A0, 0);
   analogReadResolution(12);
 
-  Serial.begin(115200);
+  //Serial.begin(115200);
 
   strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
   strip.show();            // Turn OFF all pixels ASAP
@@ -185,13 +188,13 @@ void loop() {
     int QT8 = map(qT8,450,920,0,4095);
     if (QT8 <=0) QT8 =0;
     if (QT8 >=4095) QT8 =4095;
+/*
+if (QT6 >= 200) colorWipeR(strip.Color(QT6 >> 4, QT1 >> 5, 0), 0);  // Blue
+else colorWipeR(strip.Color(LEDcounter >> 1, LEDcounter >> 2, 0), 0);
 
-    if (QT6 >=200) colorWipeR(strip.Color(  QT6>>4,   QT1>>5, 0), 0); // Blue
-    else colorWipeR(strip.Color(  LEDcounter>>1, LEDcounter>>2, 0), 0); 
-
-    if (QT7 >=200) colorWipeL(strip.Color(  QT8>>5, QT7>>4,0), 0); // Blue
-    else colorWipeL(strip.Color(  LEDcounter>>2, LEDcounter>>1, 0), 0);
-
+if (QT7 >= 200) colorWipeL(strip.Color(QT8 >> 5, QT7 >> 4, 0), 0);  // Blue
+else colorWipeL(strip.Color(LEDcounter >> 2, LEDcounter >> 1, 0), 0);
+*/
     if (LEDcounter >= 40) {
       LEDdirection = 1;
 /*      
@@ -208,12 +211,12 @@ void loop() {
     //    A4   A3
     // QT6      QT7
     
-    osc1.inc = ((((analogRead(A5) << 13) >> 1) + 0) / SAMPLE_RATE) << 8;
+    osc1.inc = ((((analogRead(2) << 13) >> 1) + 0) / SAMPLE_RATE) << 8;
 
     uint32_t waveform = QT1;
     osc1.waveform2 = waveform;
     osc1.waveform1 = maxAnalogIn - waveform;
-    osc1.crossFM  = analogRead(A4);
+    osc1.crossFM  = analogRead(4);
     osc1.volume = QT6;
 
     //osc2.inc = ((frequency * WAVE_TABLE_SIZE) / SAMPLE_RATE) * shiftfactor;
@@ -224,7 +227,7 @@ void loop() {
     osc2.waveform1 = maxAnalogIn - waveform;
     osc2.crossFM = analogRead(A3);    
     osc2.volume= QT7;
-    
+   /* 
     Serial.print(qt1);
     Serial.print("\t");
     Serial.print(qT6);
@@ -232,7 +235,7 @@ void loop() {
     Serial.print(qT7);
     Serial.print("\t");
     Serial.println(qT8);
-    
+    */
     counter = 0;
   }
 }

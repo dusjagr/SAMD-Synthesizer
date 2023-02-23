@@ -8,11 +8,11 @@ Adafruit_FreeTouch qt_6 = Adafruit_FreeTouch( A6, OVERSAMPLE_16, RESISTOR_50K, F
 Adafruit_FreeTouch qt_7 = Adafruit_FreeTouch(A7, OVERSAMPLE_16, RESISTOR_50K, FREQ_MODE_NONE);
 Adafruit_FreeTouch qt_8 = Adafruit_FreeTouch( A8, OVERSAMPLE_16, RESISTOR_50K, FREQ_MODE_NONE);
 
-#define SAMPLE_RATE 22000
+#define SAMPLE_RATE 8000
 #define WAVE_TABLE_SIZE 8192
 
 #define DATA_PIN 10
-#define NUM_LEDS 8
+#define NUM_LEDS 24
 
 CRGB leds[NUM_LEDS];
 
@@ -136,7 +136,7 @@ void TC4_Handler() {
 
     tableIndex = accumulator >> 10; // / shiftfactor;
     value1 = sinetable[tableIndex];  
-    value2 = sawtable[tableIndex];
+    value2 = sine2table[tableIndex];
     
     osc2.phase_accumulator = accumulator;
     sample2 = (((value1 * osc2.waveform1) >> 6) + ((value2 * osc2.waveform2) >> 6)) / maxAnalogIn;
@@ -184,7 +184,7 @@ void loop() {
     if (QT8 >=4095) QT8 =4095;
     
     if (QT6 >=200) colorWipeL(QT6>>4,QT1>>5,0, 0);
-    else colorWipeL(LEDcounter>>1,LEDcounter>>2,0, 0);
+    else colorWipeL(LEDcounter>>0,0,0, 0);
 
     if (QT7 >=200) colorWipeR(QT8>>5,QT7>>4,0, 0);
     else colorWipeR(LEDcounter>>2,LEDcounter>>1,0, 0);
@@ -207,7 +207,7 @@ void loop() {
     uint32_t waveform = QT1;
     osc1.waveform2 = waveform;
     osc1.waveform1 = maxAnalogIn - waveform;
-    osc1.crossFM  = analogRead(A4);
+    osc1.crossFM  = analogRead(4);
     osc1.volume = QT6;
 
     //osc2.inc = ((frequency * WAVE_TABLE_SIZE) / SAMPLE_RATE) * shiftfactor;
@@ -218,7 +218,7 @@ void loop() {
     osc2.waveform1 = maxAnalogIn - waveform;
     osc2.crossFM = analogRead(A3);    
     osc2.volume= QT7;
-    
+    /*
     Serial.print(QT1);
     Serial.print("\t");
     Serial.print(QT6);
@@ -234,20 +234,20 @@ void loop() {
     Serial.print(qT7);
     Serial.print("\t");
     Serial.println(qT8);
-    
+    */
     counter = 0;
   }
 }
 
 void colorWipeR(uint8_t red,uint8_t green,uint8_t blue, int wait) {
-  for(int i=0; i<NUM_LEDS/2; i++) { // For each pixel in strip...
+  for(int i=0+(LEDdirection+1)*1; i<NUM_LEDS/2; i+=2) { // For each pixel in strip...
     leds[i] = CRGB(red, green, blue);
     FastLED.show();                         //  Update strip to match
     //delay(wait);                           //  Pause for a moment
   }
 }
 void colorWipeL(uint8_t red,uint8_t green,uint8_t blue, int wait) {
-  for(int i=NUM_LEDS/2; i<NUM_LEDS; i++) { // For each pixel in strip...
+  for(int i=NUM_LEDS/2+(LEDdirection+1)*1; i<NUM_LEDS; i+=2) { // For each pixel in strip...
     leds[i] = CRGB(red, green, blue);
     FastLED.show();                         //  Update strip to match
     //delay(wait);                           //  Pause for a moment
